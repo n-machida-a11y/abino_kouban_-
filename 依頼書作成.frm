@@ -32,6 +32,9 @@ Private m_KoujiBangou As String
 '--- 高速化のため、各種リストを一時保存するキャッシュ変数 ---
 Private m_CachedSeikyuusakiList As Variant      ' 「請求書提出先」リスト
 
+'--- セル位置マッピング（依頼書セル設定シートから読込） ---
+Private m_CellMap As Object
+
 '--- このフォームで処理する外部ファイルのパスを保存する変数 ---
 Private m_TARGET_FILE_PATH As String
 
@@ -183,6 +186,9 @@ Private Sub UserForm_Initialize()
     m_CachedSeikyuusakiList = GetColumnData(wsOtherMaster, MASTER_OTHER_SEIKYUUSAKI_COL, 2)
     Me.請求書提出先.List = m_CachedSeikyuusakiList
 
+
+    ' 依頼書セル設定シートからセル位置マッピングを読み込み
+    Call LoadCellSettings(wbTarget_Init)
 
     ' 提出要項・同封物はOptionButtonに変更済み（マスタ読み込み不要）
 
@@ -392,20 +398,20 @@ Private Sub 依頼書作成_Click()
 
     With wsRequest
         ' --- ヘッダー部 ---
-        .Range("F5").Value = Me.請求書提出先.Value                    ' 請求宛名
-        .Range("F6").Value = "〒" & Me.郵便番号.Value & "　" & Me.住所.Value  ' 郵送先住所
+        .Range(GetCellAddr("請求宛名")).Value = Me.請求書提出先.Value                    ' 請求宛名
+        .Range(GetCellAddr("郵送先住所")).Value = "〒" & Me.郵便番号.Value & "　" & Me.住所.Value  ' 郵送先住所
         .Range("F7").Value = Val(Replace(Me.請求金額.Value, ",", ""))  ' 請求金額(税込)
-        .Range("N7").Value = "（ 内 消費税 10％ " & Me.消費税.Value & "円 ）"  ' 消費税テキスト
-        .Range("F8").Value = Me.工事名称.Value                        ' 工事名称
-        .Range("Q8").Value = m_KoujiBangou                            ' 工事番号
-        .Range("F10").Value = GetSelectedTeishutsuyoukou()             ' 提出要項
-        .Range("F11").Value = GetSelectedDoufuubutsu()                 ' 同封物
+        .Range(GetCellAddr("消費税テキスト")).Value = "（ 内 消費税 10％ " & Me.消費税.Value & "円 ）"  ' 消費税テキスト
+        .Range(GetCellAddr("工事名称")).Value = Me.工事名称.Value                        ' 工事名称
+        .Range(GetCellAddr("工事番号")).Value = m_KoujiBangou                            ' 工事番号
+        .Range(GetCellAddr("提出要項")).Value = GetSelectedTeishutsuyoukou()             ' 提出要項
+        .Range(GetCellAddr("同封物")).Value = GetSelectedDoufuubutsu()                 ' 同封物
         
         ' --- 日付部（行12） ---
-        If IsDate(Me.着手.Value) Then .Range("H12").Value = CDate(Me.着手.Value)
-        If IsDate(Me.完成.Value) Then .Range("L12").Value = CDate(Me.完成.Value)
-        If IsDate(Me.引渡日.Value) Then .Range("O12").Value = CDate(Me.引渡日.Value)
-        If IsDate(Me.提出日付.Value) Then .Range("R12").Value = CDate(Me.提出日付.Value)
+        If IsDate(Me.着手.Value) Then .Range(GetCellAddr("着手")).Value = CDate(Me.着手.Value)
+        If IsDate(Me.完成.Value) Then .Range(GetCellAddr("完成")).Value = CDate(Me.完成.Value)
+        If IsDate(Me.引渡日.Value) Then .Range(GetCellAddr("引渡日")).Value = CDate(Me.引渡日.Value)
+        If IsDate(Me.提出日付.Value) Then .Range(GetCellAddr("請求書日付")).Value = CDate(Me.提出日付.Value)
         
         ' --- 明細5行（行14-18）---
         .Range("F14").Value = Me.txt名称1.Value
@@ -443,17 +449,17 @@ Private Sub 依頼書作成_Click()
         .Range("R20").Value = Val(Replace(Me.消費税.Value, ",", ""))
         
         ' --- 引継ぎコメント ---
-        .Range("F21").Value = Me.引継ぎコメント.Value
+        .Range(GetCellAddr("引継ぎコメント")).Value = Me.引継ぎコメント.Value
         
         ' --- 作成日（年・月・日を分割）---
         If IsDate(Me.作成日.Value) Then
-            .Range("B28").Value = Year(CDate(Me.作成日.Value))
-            .Range("E28").Value = Month(CDate(Me.作成日.Value))
-            .Range("I28").Value = Day(CDate(Me.作成日.Value))
+            .Range(GetCellAddr("作成日(年)")).Value = Year(CDate(Me.作成日.Value))
+            .Range(GetCellAddr("作成日(月)")).Value = Month(CDate(Me.作成日.Value))
+            .Range(GetCellAddr("作成日(日)")).Value = Day(CDate(Me.作成日.Value))
         End If
         
         ' --- 担当者名 ---
-        .Range("Q31").Value = Me.担当者.Value
+        .Range(GetCellAddr("担当者名")).Value = Me.担当者.Value
     End With
     Call SafeProtectFull(wsRequest)
 
@@ -671,7 +677,7 @@ Private Sub AddDataToIraiRireki(ByVal wsRireki As Worksheet)
     
     If Not wsReq Is Nothing Then
         Call SafeUnprotect(wsReq)
-        wsReq.Range("R3").Value = newIraiNo
+        wsReq.Range(GetCellAddr("依頼NO")).Value = newIraiNo
         Call SafeProtectFull(wsReq)
     End If
 End Sub
@@ -1220,7 +1226,96 @@ Private Function ExtractJSONField(ByVal obj As String, ByVal fieldName As String
 End Function
 
 
-' 補足：シート存在チェック用の関数
+
+'================================================================================
+' セル位置マッピング（依頼書セル設定シートから動的に読み込む）
+'================================================================================
+
+' 「依頼書セル設定」シートからセル位置マッピングを読み込んでキャッシュ
+' 明細5行の固定行数（VBA側のフォーム対応行数）
+Private Const MEISAI_ROW_COUNT As Long = 5
+
+' 「依頼書セル設定」シートからセル位置マッピングを読み込んでキャッシュ
+Private Sub LoadCellSettings(ByVal wbMaster As Workbook)
+    Dim ws As Worksheet
+    Dim r As Long, lastRow As Long
+    Dim itemName As String, cellAddr As String
+    
+    Set m_CellMap = CreateObject("Scripting.Dictionary")
+    
+    On Error GoTo CleanUp
+    If wbMaster Is Nothing Then Exit Sub
+    
+    Set ws = Nothing
+    On Error Resume Next
+    Set ws = wbMaster.Sheets(SHEET_CELL_SETTING)
+    On Error GoTo CleanUp
+    If ws Is Nothing Then Exit Sub
+    
+    lastRow = ws.Cells(ws.Rows.count, "A").End(xlUp).Row
+    For r = 2 To lastRow
+        itemName = Trim(CStr(ws.Cells(r, "A").Value))
+        cellAddr = Trim(CStr(ws.Cells(r, "B").Value))
+        ' セクション見出し（【...】）やセルが空の行はスキップ
+        If itemName <> "" And cellAddr <> "" And Left(itemName, 1) <> "【" Then
+            If Not m_CellMap.Exists(itemName) Then
+                m_CellMap.Add itemName, cellAddr
+            End If
+        End If
+    Next r
+    
+CleanUp:
+    Exit Sub
+End Sub
+
+' 項目名からセル番地を取得（単一セル用）
+Private Function GetCellAddr(ByVal itemName As String) As String
+    If m_CellMap Is Nothing Then GetCellAddr = "": Exit Function
+    If m_CellMap.Exists(itemName) Then
+        GetCellAddr = m_CellMap(itemName)
+    Else
+        GetCellAddr = ""
+    End If
+End Function
+
+' 明細セルの番地を取得（rowIdx: 1～5）
+' 例: GetMeisaiCellAddr("名称列", 1) → "F14"
+Private Function GetMeisaiCellAddr(ByVal columnItemName As String, ByVal rowIdx As Long) As String
+    Dim col As String, startRow As String, r As Long
+    col = GetCellAddr(columnItemName)
+    startRow = GetCellAddr("明細開始行")
+    If col = "" Or startRow = "" Or Not IsNumeric(startRow) Then
+        GetMeisaiCellAddr = ""
+        Exit Function
+    End If
+    r = CLng(startRow) + (rowIdx - 1)
+    GetMeisaiCellAddr = col & r
+End Function
+
+' 小計セル番地：明細開始行 + 明細行数 行目 + 小計列
+Private Function GetSubtotalCellAddr() As String
+    Dim col As String, startRow As String
+    col = GetCellAddr("小計列")
+    startRow = GetCellAddr("明細開始行")
+    If col = "" Or startRow = "" Or Not IsNumeric(startRow) Then
+        GetSubtotalCellAddr = ""
+        Exit Function
+    End If
+    GetSubtotalCellAddr = col & (CLng(startRow) + MEISAI_ROW_COUNT)
+End Function
+
+' 消費税セル番地：小計の次の行 + 消費税列
+Private Function GetTaxCellAddr() As String
+    Dim col As String, startRow As String
+    col = GetCellAddr("消費税列")
+    startRow = GetCellAddr("明細開始行")
+    If col = "" Or startRow = "" Or Not IsNumeric(startRow) Then
+        GetTaxCellAddr = ""
+        Exit Function
+    End If
+    GetTaxCellAddr = col & (CLng(startRow) + MEISAI_ROW_COUNT + 1)
+End Function
+
 Private Function SheetExists(ByVal wb As Workbook, ByVal sheetName As String) As Boolean
     Dim ws As Worksheet
     On Error Resume Next
