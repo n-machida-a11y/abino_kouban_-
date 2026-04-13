@@ -1058,8 +1058,8 @@ End Function
 Private Function JSONEscape(ByVal s As String) As String
     Dim r As String
     r = s
-    r = Replace(r, "", "\")
-    r = Replace(r, """", """")
+    r = Replace(r, "\", "\\")
+    r = Replace(r, """", "\""")
     r = Replace(r, vbCrLf, " ")
     r = Replace(r, vbCr, " ")
     r = Replace(r, vbLf, " ")
@@ -1070,8 +1070,8 @@ End Function
 Private Function JSONUnescape(ByVal s As String) As String
     Dim r As String
     r = s
-    r = Replace(r, """", """")
-    r = Replace(r, "\", "")
+    r = Replace(r, "\""", """")
+    r = Replace(r, "\\", "\")
     JSONUnescape = r
 End Function
 
@@ -1206,7 +1206,7 @@ Private Function ExtractJSONField(ByVal obj As String, ByVal fieldName As String
             If Mid(obj, valEnd, 1) = """" Then
                 ' íºëOÇ™ \ Ç≈Ç»ÇØÇÍÇŒèIí[
                 If valEnd = 1 Then Exit Do
-                If Mid(obj, valEnd - 1, 1) <> "" Then Exit Do
+                If Mid(obj, valEnd - 1, 1) <> "\" Then Exit Do
             End If
             valEnd = valEnd + 1
         Loop
