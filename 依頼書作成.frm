@@ -1316,6 +1316,17 @@ Private Function GetTaxCellAddr() As String
     GetTaxCellAddr = col & (CLng(startRow) + MEISAI_ROW_COUNT + 1)
 End Function
 
+' 明細1行を転記するヘルパー
+Private Sub WriteMeisaiRow(ByVal ws As Worksheet, ByVal rowIdx As Long, _
+                            ByVal nameVal As String, ByVal qtyVal As String, _
+                            ByVal unitVal As String, ByVal amountVal As String)
+    ws.Range(GetMeisaiCellAddr("名称列", rowIdx)).Value = nameVal
+    ws.Range(GetMeisaiCellAddr("数量列", rowIdx)).Value = val(qtyVal)
+    ws.Range(GetMeisaiCellAddr("単位列", rowIdx)).Value = unitVal
+    ws.Range(GetMeisaiCellAddr("単価列", rowIdx)).Value = val(Replace(amountVal, ",", ""))
+    ws.Range(GetMeisaiCellAddr("金額列", rowIdx)).Value = val(Replace(amountVal, ",", ""))
+End Sub
+
 Private Function SheetExists(ByVal wb As Workbook, ByVal sheetName As String) As Boolean
     Dim ws As Worksheet
     On Error Resume Next
