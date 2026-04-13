@@ -24,6 +24,12 @@ Private m_TARGET_FILE_PATH As String
 '================================================================================
 ' フォーム初期化
 '================================================================================
+
+Private Sub UserForm_Terminate()
+    ' メモリリーク防止：Dictionary オブジェクトを明示的に解放
+    Set m_CachedKoujiData = Nothing
+End Sub
+
 Private Sub UserForm_Initialize()
     Dim wbTarget As Workbook, wsMaster As Worksheet
     Dim originalDisplayAlerts As Boolean
@@ -347,6 +353,7 @@ Private Sub UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaster As 
         GoTo FinalizeUpdateLocal
     End If
 
+    On Error GoTo ErrorHandlerUpdateLocalDel
     Call SafeUnprotect(wsDest)
     wsDest.Range("A3:X" & wsDest.Rows.count).Clear
     lastRowSource = wsSource.Cells(wsSource.Rows.count, "A").End(xlUp).Row
@@ -356,6 +363,11 @@ Private Sub UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaster As 
         copyRange.Copy Destination:=wsDest.Range("A3")
     End If
     Call SafeProtectData(wsDest)
+    Exit Sub
+
+ErrorHandlerUpdateLocalDel:
+    Call SafeProtectData(wsDest)
+    MsgBox "ローカル一覧更新中にエラー: " & Err.Description, vbCritical
 
 FinalizeUpdateLocal:
     Application.CutCopyMode = False

@@ -128,6 +128,7 @@ FinalizeUpdateList:
     Exit Sub
 
 ErrorHandlerUpdateList:
+    If Not wsDest Is Nothing Then Call SafeProtectData(wsDest)  ' エラー時も保護を復元
     MsgBox "「" & SHEET_KOUJI_LIST & "」シートの更新中にエラーが発生しました: " & Err.Description, vbCritical, "更新エラー"
     Resume FinalizeUpdateList
 End Sub
@@ -213,6 +214,7 @@ FinalizeUpdateRireki:
     Exit Sub
 
 ErrorHandlerUpdateRireki:
+    If Not wsDest Is Nothing Then Call SafeProtectData(wsDest)  ' エラー時も保護を復元
     MsgBox "「" & SHEET_IRAI_RIREKI & "」シートの更新中にエラーが発生しました: " & Err.Description, vbCritical, "更新エラー"
     Resume FinalizeUpdateRireki
 End Sub

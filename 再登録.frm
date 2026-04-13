@@ -37,6 +37,12 @@ End Sub
 '================================================================================
 ' フォーム初期化
 '================================================================================
+
+Private Sub UserForm_Terminate()
+    ' メモリリーク防止：キャッシュ変数を明示的に解放
+    m_CachedStaffList = Empty
+End Sub
+
 Private Sub UserForm_Initialize()
     Dim wbTarget_Init As Workbook
     Dim wsMaster_Init As Worksheet
@@ -365,6 +371,7 @@ Private Sub UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaster As 
     Set wsDest = ThisWorkbook.Sheets(destSheetName)
     If wsDest Is Nothing Then Exit Sub
 
+    On Error GoTo ErrorHandlerUpdateLocalSai
     Call SafeUnprotect(wsDest)
     wsDest.Range("A3:X" & wsDest.Rows.count).Clear
     lastRowSource = wsSource.Cells(wsSource.Rows.count, "A").End(xlUp).Row
@@ -376,6 +383,11 @@ Private Sub UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaster As 
 
     Call SafeProtectData(wsDest)
     Application.CutCopyMode = False
+    Exit Sub
+
+ErrorHandlerUpdateLocalSai:
+    Call SafeProtectData(wsDest)
+    MsgBox "ローカル一覧更新中にエラー: " & Err.Description, vbCritical
     Exit Sub
 
 ErrorHandlerUpdateLocal:

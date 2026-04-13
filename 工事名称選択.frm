@@ -42,6 +42,12 @@ End Sub
 '================================================================================
 ' フォームが開かれる瞬間の準備処理
 '================================================================================
+
+Private Sub UserForm_Terminate()
+    ' メモリリーク防止：Dictionary オブジェクトを明示的に解放
+    Set m_CachedKoujiList = Nothing
+End Sub
+
 Private Sub UserForm_Initialize()
     Dim wbTarget_Init As Workbook
     Dim wsMaster_Init As Worksheet

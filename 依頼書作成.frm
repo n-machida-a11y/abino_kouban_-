@@ -151,6 +151,13 @@ End Sub
 ' フォームが開かれる瞬間の準備処理（１回だけ実行）
 ' ここでは、ドロップダウンリストの中身など、フォームの基本的な部品を準備します。
 '================================================================================
+
+Private Sub UserForm_Terminate()
+    ' メモリリーク防止：オブジェクト参照を明示的に解放
+    Set m_CellMap = Nothing
+    m_CachedSeikyuusakiList = Empty
+End Sub
+
 Private Sub UserForm_Initialize()
     Dim wbTarget_Init As Workbook
     Dim wsKanriMaster As Worksheet, wsOtherMaster As Worksheet
@@ -590,6 +597,7 @@ Private Sub 提出日付_Exit(ByVal Cancel As MSForms.ReturnBoolean): Call ValidateD
 Private Sub AddDataToIraiRireki(ByVal wsRireki As Worksheet)
     If wsRireki Is Nothing Then Exit Sub
 
+    On Error GoTo ErrorHandlerAddRireki
     Call SafeUnprotect(wsRireki)
     
     Dim nextRow As Long, lastRow As Long
@@ -680,6 +688,13 @@ Private Sub AddDataToIraiRireki(ByVal wsRireki As Worksheet)
         wsReq.Range(GetCellAddr("依頼NO")).Value = newIraiNo
         Call SafeProtectFull(wsReq)
     End If
+    Exit Sub
+
+ErrorHandlerAddRireki:
+    ' エラー発生時も必ず保護を復元
+    Call SafeProtectData(wsRireki)
+    If Not wsReq Is Nothing Then Call SafeProtectFull(wsReq)
+    MsgBox "依頼履歴の更新中にエラー: " & Err.Description, vbCritical
 End Sub
 
 
@@ -717,6 +732,7 @@ End Sub
 Private Sub UpdateExternalFile(ByVal wsTarget As Worksheet, ByVal rowToUpdate As Long)
     If wsTarget Is Nothing Or rowToUpdate = 0 Then Exit Sub
 
+    On Error GoTo ErrorHandlerExt
     Call SafeUnprotect(wsTarget)
 
     With wsTarget
@@ -737,12 +753,18 @@ Private Sub UpdateExternalFile(ByVal wsTarget As Worksheet, ByVal rowToUpdate As
         .Cells(rowToUpdate, "N").Value = Date ' 最終更新日
     End With
     Call SafeProtectData(wsTarget)
+    Exit Sub
+
+ErrorHandlerExt:
+    Call SafeProtectData(wsTarget)
+    MsgBox "工事番号一覧の更新中にエラー: " & Err.Description, vbCritical
 End Sub
 
 ' フォームの入力内容で、外部ファイルの「その他マスタ」を更新する
 Private Sub UpdateAddressMaster(ByVal wsMaster As Worksheet)
     If wsMaster Is Nothing Then Exit Sub
 
+    On Error GoTo ErrorHandlerAddrMaster
     Call SafeUnprotect(wsMaster)
 
     Dim searchVal As String, foundCell As Range
@@ -767,6 +789,11 @@ Private Sub UpdateAddressMaster(ByVal wsMaster As Worksheet)
 
     ' 「その他マスタ」は重要なデータなので、最後に保護をかける
     Call SafeProtectFull(wsMaster)
+    Exit Sub
+
+ErrorHandlerAddrMaster:
+    Call SafeProtectFull(wsMaster)
+    MsgBox "その他マスタの更新中にエラー: " & Err.Description, vbCritical
 End Sub
 
 ' 「その他マスタ」から選択された請求先に紐づく情報を探し、フォームに自動入力する

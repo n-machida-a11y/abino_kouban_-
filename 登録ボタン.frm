@@ -35,6 +35,12 @@ End Sub
 '================================================================================
 ' フォーム初期化
 '================================================================================
+
+Private Sub UserForm_Terminate()
+    ' メモリリーク防止：キャッシュ変数を明示的に解放
+    m_CachedStaffList = Empty
+End Sub
+
 Private Sub UserForm_Initialize()
     Dim wbTarget_Init As Workbook
     Dim wsMaster_Init As Worksheet
@@ -330,6 +336,7 @@ End Function
 Private Sub TransferDataToSheet(ByVal wsTarget As Worksheet, ByVal targetRow As Long, ByVal newKoujiBangou As String)
     Dim inputYearFull As Integer
     Dim parts() As String
+    On Error GoTo ErrorHandlerTransfer
 
     Call SafeUnprotect(wsTarget)
 
@@ -366,6 +373,11 @@ Private Sub TransferDataToSheet(ByVal wsTarget As Worksheet, ByVal targetRow As 
         .Cells(targetRow, "M").Value = Me.コメント.Value
     End With
     Call SafeProtectData(wsTarget)
+    Exit Sub
+
+ErrorHandlerTransfer:
+    Call SafeProtectData(wsTarget)
+    MsgBox "工事番号一覧へのデータ転記中にエラー: " & Err.Description, vbCritical
 End Sub
 
 Private Function UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaster As Worksheet) As Boolean
@@ -390,6 +402,7 @@ Private Function UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaste
         Exit Function
     End If
 
+    On Error GoTo ErrorHandlerUpdateLocalReg
     Call SafeUnprotect(wsDest)
     wsDest.Range("A3:X" & wsDest.Rows.count).Clear
 
@@ -402,6 +415,12 @@ Private Function UpdateLocalListSheet(ByVal wsSource As Worksheet, ByVal wsMaste
     Call SafeProtectData(wsDest)
     Application.CutCopyMode = False
     UpdateLocalListSheet = True
+    Exit Function
+
+ErrorHandlerUpdateLocalReg:
+    Call SafeProtectData(wsDest)
+    MsgBox "ローカル一覧更新中にエラー: " & Err.Description, vbCritical
+    UpdateLocalListSheet = False
 End Function
 
 
