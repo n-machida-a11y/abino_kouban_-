@@ -40,20 +40,52 @@ Public Sub SaveRequestFormAsPDF()
           saveFolder = Environ("USERPROFILE") & "\Downloads"
       End If
     '--- ③ PDFのファイル名をシートのセルから作成 ---
-    '   依頼書作成フォームが登録した Named Range から読み取る。
-    '   これによりレイアウト変更（請求宛名・工事名称のセル移動）に追従できる。
-    '   Named Range が無い場合は依頼書作成フォームで一度書き込みを行うよう促す。
+    '   優先度1: 依頼書作成フォームが登録した Named Range
+    '   優先度2: ハードコードの既定セル（F5, F8）
+    '   Named Range が使えない場合も既定セル参照でPDF自体は発行する
+    Dim nmRecipient As Name, nmKoujiName As Name
+    Dim refInfo As String
     On Error Resume Next
-    recipient = ThisWorkbook.Names("PDF_請求宛名").RefersToRange.Value
-    KoujiName = ThisWorkbook.Names("PDF_工事名称").RefersToRange.Value
+    Set nmRecipient = ThisWorkbook.Names("PDF_請求宛名")
+    Set nmKoujiName = ThisWorkbook.Names("PDF_工事名称")
     Err.Clear
     On Error GoTo 0
 
+    If Not nmRecipient Is Nothing Then
+        On Error Resume Next
+        recipient = nmRecipient.RefersToRange.Value
+        On Error GoTo 0
+    End If
+    If Not nmKoujiName Is Nothing Then
+        On Error Resume Next
+        KoujiName = nmKoujiName.RefersToRange.Value
+        On Error GoTo 0
+    End If
+
+    ' フォールバック: Named Range で取れなかった場合は既定セル（F5, F8）を読む
+    If Trim(recipient) = "" Then recipient = CStr(wsRequest.Range("F5").Value)
+    If Trim(KoujiName) = "" Then KoujiName = CStr(wsRequest.Range("F8").Value)
+
     If Trim(recipient) = "" Or Trim(KoujiName) = "" Then
-        MsgBox "PDFファイル名の生成に必要な情報が見つかりません。" & vbCrLf & vbCrLf & _
-               "依頼書作成フォームから一度「書き込み」を実行してから、" & vbCrLf & _
-               "再度PDF保存をお試しください。" & vbCrLf & vbCrLf & _
-               "（Named Range: PDF_請求宛名 / PDF_工事名称 が未登録です）", _
+        ' 診断情報を組み立てる
+        Dim diagMsg As String
+        diagMsg = "【診断情報】" & vbCrLf
+        If nmRecipient Is Nothing Then
+            diagMsg = diagMsg & " PDF_請求宛名 : Named Range 未登録" & vbCrLf
+        Else
+            diagMsg = diagMsg & " PDF_請求宛名 : " & nmRecipient.RefersTo & " → 値=[" & recipient & "]" & vbCrLf
+        End If
+        If nmKoujiName Is Nothing Then
+            diagMsg = diagMsg & " PDF_工事名称 : Named Range 未登録" & vbCrLf
+        Else
+            diagMsg = diagMsg & " PDF_工事名称 : " & nmKoujiName.RefersTo & " → 値=[" & KoujiName & "]" & vbCrLf
+        End If
+        diagMsg = diagMsg & " 既定セル F5 : [" & wsRequest.Range("F5").Value & "]" & vbCrLf
+        diagMsg = diagMsg & " 既定セル F8 : [" & wsRequest.Range("F8").Value & "]" & vbCrLf
+
+        MsgBox "PDFファイル名の生成に必要な情報が見つかりません。" & vbCrLf & _
+               "依頼書作成フォームから書き込みを実行してから再度お試しください。" & vbCrLf & vbCrLf & _
+               diagMsg, _
                vbExclamation, "PDF作成"
         Exit Sub
     End If
