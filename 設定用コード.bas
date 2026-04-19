@@ -45,7 +45,7 @@ Public Const SHEET_PASSWORD As String = "3555"
 ' ===== 提出依頼者の所属部署 =====
 ' 各管理Excelごとに固有の値を設定する（例: "建築事業部", "土木事業部" 等）
 ' 空文字の場合は書き込みをスキップする
-Public Const SUBMITTER_DEPARTMENT As String = ""
+Public Const SUBMITTER_DEPARTMENT As String = "建築事業部"
 
 '================================================================================
 ' マスターファイルのパスを返す共通関数
