@@ -49,6 +49,9 @@ Private Const MASTER_OTHER_SEIKYUUSAKI_COL As String = "A"      ' 請求書提出先
 Private Const MASTER_OTHER_YUBIN_NO_COL As String = "B"         ' 郵便番号
 Private Const MASTER_OTHER_JUSHO_COL As String = "C"            ' 住所
 
+'--- 明細5行の固定行数（VBA側のフォーム対応行数） ---
+Private Const MEISAI_ROW_COUNT As Long = 5
+
 
 
 '================================================================================
@@ -1262,10 +1265,6 @@ End Function
 '================================================================================
 ' セル位置マッピング（依頼書セル設定シートから動的に読み込む）
 '================================================================================
-
-' 「依頼書セル設定」シートからセル位置マッピングを読み込んでキャッシュ
-' 明細5行の固定行数（VBA側のフォーム対応行数）
-Private Const MEISAI_ROW_COUNT As Long = 5
 
 ' 「依頼書セル設定」シートからセル位置マッピングを読み込んでキャッシュ
 Private Sub LoadCellSettings(ByVal wbMaster As Workbook)
