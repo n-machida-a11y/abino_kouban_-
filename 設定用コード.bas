@@ -40,7 +40,7 @@ Public Const CELL_LOCAL_COPY_SHEET As String = "G5"
 
 ' ===== シート保護パスワード =====
 ' 現在は未使用（空欄）。将来的に保護を設定する場合はここで一括管理する。
-Public Const SHEET_PASSWORD As String = "kouji"
+Public Const SHEET_PASSWORD As String = "3555"
 
 '================================================================================
 ' マスターファイルのパスを返す共通関数
