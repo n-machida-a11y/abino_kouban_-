@@ -467,6 +467,11 @@ Private Sub 依頼書作成_Click()
         
         ' --- 担当者名 ---
         .Range(GetCellAddr("担当者名")).Value = Me.担当者.Value
+
+        ' --- PDF作成用: ファイル名に使うセル位置を Named Range で記憶 ---
+        '     (PDF作成.bas がレイアウト変更に追従できるように)
+        Call RegisterSheetCellName(ThisWorkbook, wsRequest, "PDF_請求宛名", GetCellAddr("請求宛名"))
+        Call RegisterSheetCellName(ThisWorkbook, wsRequest, "PDF_工事名称", GetCellAddr("工事名称"))
     End With
     Call SafeProtectFull(wsRequest)
 

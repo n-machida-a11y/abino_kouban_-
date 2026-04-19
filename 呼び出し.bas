@@ -155,3 +155,33 @@ Public Sub ClearAllFilters(ByVal ws As Worksheet)
     If ws.AutoFilterMode Then ws.AutoFilterMode = False
     On Error GoTo 0
 End Sub
+
+'================================================================================
+' PDF作成用のNamed Range登録ヘルパー
+'   「請求書提出依頼書」シート上の、PDFファイル名に使うセル位置を
+'   Named Range に記憶させる。PDF作成.bas はこの Named Range を参照することで
+'   レイアウト変更（セル移動）に自動追従できる。
+'
+' 引数:
+'   wb       : 対象ブック（通常は ThisWorkbook）
+'   ws       : 対象シート（通常は 請求書提出依頼書）
+'   nameId   : 登録する Named Range の名前（例: "PDF_請求宛名"）
+'   cellAddr : 記憶するセル番地（例: "F5"）。空文字なら何もしない
+'================================================================================
+Public Sub RegisterSheetCellName(ByVal wb As Workbook, ByVal ws As Worksheet, _
+                                 ByVal nameId As String, ByVal cellAddr As String)
+    If wb Is Nothing Or ws Is Nothing Then Exit Sub
+    If Trim(cellAddr) = "" Or Trim(nameId) = "" Then Exit Sub
+
+    ' 既存の同名Named Rangeを削除（上書き）
+    On Error Resume Next
+    wb.Names(nameId).Delete
+    Err.Clear
+    On Error GoTo 0
+
+    ' 新規登録
+    On Error Resume Next
+    wb.Names.Add Name:=nameId, RefersTo:="='" & ws.Name & "'!" & cellAddr
+    On Error GoTo 0
+End Sub
+

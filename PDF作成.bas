@@ -40,11 +40,21 @@ Public Sub SaveRequestFormAsPDF()
           saveFolder = Environ("USERPROFILE") & "\Downloads"
       End If
     '--- ③ PDFのファイル名をシートのセルから作成 ---
-    recipient = wsRequest.Range("F7").Value
-    KoujiName = wsRequest.Range("M10").Value
-    
+    '   依頼書作成フォームが登録した Named Range から読み取る。
+    '   これによりレイアウト変更（請求宛名・工事名称のセル移動）に追従できる。
+    '   Named Range が無い場合は依頼書作成フォームで一度書き込みを行うよう促す。
+    On Error Resume Next
+    recipient = ThisWorkbook.Names("PDF_請求宛名").RefersToRange.Value
+    KoujiName = ThisWorkbook.Names("PDF_工事名称").RefersToRange.Value
+    Err.Clear
+    On Error GoTo 0
+
     If Trim(recipient) = "" Or Trim(KoujiName) = "" Then
-        MsgBox "ファイル名の作成に必要な情報（F7セル:請求書提出先、M10セル:工事名称）がシートに見つかりません。", vbExclamation
+        MsgBox "PDFファイル名の生成に必要な情報が見つかりません。" & vbCrLf & vbCrLf & _
+               "依頼書作成フォームから一度「書き込み」を実行してから、" & vbCrLf & _
+               "再度PDF保存をお試しください。" & vbCrLf & vbCrLf & _
+               "（Named Range: PDF_請求宛名 / PDF_工事名称 が未登録です）", _
+               vbExclamation, "PDF作成"
         Exit Sub
     End If
     
