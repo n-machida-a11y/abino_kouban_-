@@ -107,12 +107,63 @@ End Function
 ' シート保護ヘルパー（複数人利用対応）
 '================================================================================
 
-' パスワード付きでシート保護を解除する（未保護でもエラーにならない）
-Public Sub SafeUnprotect(ByVal ws As Worksheet)
+' パスワード付きでシート保護を解除する。
+' 1. まず設定の SHEET_PASSWORD で試行
+' 2. 失敗してinteractiveがTrueならユーザーにパスワードを聞く（InputBox）
+' 3. それでも失敗したら、呼び出し元のエラーハンドラに明確なメッセージで伝える
+'
+' 引数 interactive:
+'   True  (既定)  : 解除失敗時にユーザーにパスワード入力を求める（通常の業務操作向け）
+'   False         : 解除失敗時は即座にErr.Raise。
+'                   InputBoxを出したくないバッチ処理（Workbook_Open等）で指定する
+Public Sub SafeUnprotect(ByVal ws As Worksheet, Optional ByVal interactive As Boolean = True)
     If ws Is Nothing Then Exit Sub
+
+    ' 1回目: 設定パスワードで試行
     On Error Resume Next
     ws.Unprotect Password:=SHEET_PASSWORD
+    Err.Clear
     On Error GoTo 0
+
+    If Not ws.ProtectContents Then Exit Sub
+
+    ' 非対話モード: ここで即座に失敗を通知
+    If Not interactive Then
+        Err.Raise 1004, "SafeUnprotect", _
+            "シート「" & ws.Name & "」の保護解除に失敗しました。" & vbCrLf & _
+            "パスワード「" & SHEET_PASSWORD & "」と一致しません。"
+        Exit Sub
+    End If
+
+    ' 2回目: ユーザーにパスワードを聞いて再試行
+    Dim userPwd As String
+    userPwd = InputBox( _
+        "シート「" & ws.Name & "」の保護解除に失敗しました。" & vbCrLf & _
+        "設定パスワード「" & SHEET_PASSWORD & "」では開けません。" & vbCrLf & vbCrLf & _
+        "このシートのパスワードを入力してください：" & vbCrLf & _
+        "（空欄/キャンセルで処理を中止します）", _
+        "シート保護パスワード入力")
+
+    If userPwd = "" Then
+        Err.Raise 1004, "SafeUnprotect", _
+            "シート「" & ws.Name & "」の保護解除がキャンセルされました。" & vbCrLf & _
+            "処理を中止します。"
+        Exit Sub
+    End If
+
+    On Error Resume Next
+    ws.Unprotect Password:=userPwd
+    Err.Clear
+    On Error GoTo 0
+
+    If ws.ProtectContents Then
+        Err.Raise 1004, "SafeUnprotect", _
+            "シート「" & ws.Name & "」の保護解除に失敗しました。" & vbCrLf & _
+            "入力されたパスワードが正しくありません。" & vbCrLf & vbCrLf & _
+            "【対処方法】" & vbCrLf & _
+            " 1. Excelの「校閲」→「シート保護の解除」で手動解除してから再実行" & vbCrLf & _
+            " 2. または、設定用コード.bas の SHEET_PASSWORD を実際のパスワードに修正"
+    End If
 End Sub
 
 ' データシート保護（フィルタ・並べ替えは許可、編集は不可）

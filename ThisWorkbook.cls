@@ -29,9 +29,25 @@ Private Sub Workbook_Open()
     On Error GoTo ErrorHandler
 
     For Each ws In ThisWorkbook.Worksheets
-        ' 一旦保護を解除してフィルタをクリア
-        Call SafeUnprotect(ws)
+        ' シートごとに独立してエラー処理（1枚失敗しても他は継続）
+        ' interactive:=False でInputBoxを出さないようにする（起動時に邪魔なので）
+        On Error Resume Next
+        Call SafeUnprotect(ws, interactive:=False)
+        Dim unprotectErrNum As Long: unprotectErrNum = Err.Number
+        Dim unprotectErrDesc As String: unprotectErrDesc = Err.Description
+        Err.Clear
+
         Call ClearAllFilters(ws)
+        Err.Clear
+        On Error GoTo ErrorHandler
+
+        ' 保護解除失敗時は警告を出してこのシートはスキップ（処理は継続）
+        If unprotectErrNum <> 0 Then
+            MsgBox "シート「" & ws.Name & "」の起動時初期化に失敗しました。" & vbCrLf & _
+                   "（このシートは以前の保護状態のまま残ります）" & vbCrLf & vbCrLf & _
+                   unprotectErrDesc, vbExclamation, "シート保護警告"
+            GoTo NextSheet
+        End If
 
         ' シート名に応じて再保護
         Select Case ws.Name
@@ -47,6 +63,7 @@ Private Sub Workbook_Open()
             Case Else
                 ' その他のシート（入力フォーム等）は保護しない
         End Select
+NextSheet:
     Next ws
 
 Finalize:
