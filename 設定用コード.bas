@@ -42,6 +42,11 @@ Public Const CELL_LOCAL_COPY_SHEET As String = "G5"
 ' 現在は未使用（空欄）。将来的に保護を設定する場合はここで一括管理する。
 Public Const SHEET_PASSWORD As String = "3555"
 
+' ===== 提出依頼者の所属部署 =====
+' 各管理Excelごとに固有の値を設定する（例: "建築事業部", "土木事業部" 等）
+' 空文字の場合は書き込みをスキップする
+Public Const SUBMITTER_DEPARTMENT As String = ""
+
 '================================================================================
 ' マスターファイルのパスを返す共通関数
 ' IS_TEST_MODE が True の場合はテスト用パス、False の場合は「入力フォーム」シートの

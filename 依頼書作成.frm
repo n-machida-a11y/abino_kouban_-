@@ -411,7 +411,7 @@ Private Sub 依頼書作成_Click()
         .Range(GetCellAddr("請求宛名")).Value = Me.請求書提出先.Value                    ' 請求宛名
         .Range(GetCellAddr("郵送先住所")).Value = "〒" & Me.郵便番号.Value & "　" & Me.住所.Value  ' 郵送先住所
         .Range("F7").Value = Val(Replace(Me.請求金額.Value, ",", ""))  ' 請求金額(税込)
-        .Range(GetCellAddr("消費税テキスト")).Value = "（ 内 消費税 10％ " & Me.消費税.Value & "円 ）"  ' 消費税テキスト
+        .Range(GetCellAddr("消費税テキスト")).Value = "（ 内消費税　　￥" & Me.消費税.Value & " ）"  ' 消費税テキスト
         .Range(GetCellAddr("工事名称")).Value = Me.工事名称.Value                        ' 工事名称
         .Range(GetCellAddr("工事番号")).Value = m_KoujiBangou                            ' 工事番号
         .Range(GetCellAddr("提出要項")).Value = GetSelectedTeishutsuyoukou()             ' 提出要項
@@ -470,6 +470,12 @@ Private Sub 依頼書作成_Click()
         
         ' --- 担当者名 ---
         .Range(GetCellAddr("担当者名")).Value = Me.担当者.Value
+
+        ' --- 提出依頼者所属部署（各管理Excelごとに設定用コード.basで固定値を設定） ---
+        If SUBMITTER_DEPARTMENT <> "" Then
+            Dim depCell As String: depCell = GetCellAddr("提出依頼者所属部署")
+            If depCell <> "" Then .Range(depCell).Value = SUBMITTER_DEPARTMENT
+        End If
 
         ' --- PDF作成用: ファイル名に使うセル位置を Named Range で記憶 ---
         '     (PDF作成.bas がレイアウト変更に追従できるように)
