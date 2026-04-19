@@ -200,6 +200,18 @@ Private Sub UserForm_Initialize()
     ' 依頼書セル設定シートからセル位置マッピングを読み込み
     Call LoadCellSettings(wbTarget_Init)
 
+    ' --- PDF作成用のNamed Rangeをフォーム初期化時点で登録する ---
+    '     これにより「フォームを開くだけ→PDF実行」でもNamed Rangeが使える
+    On Error Resume Next
+    Dim wsReqEarly As Worksheet
+    Set wsReqEarly = ThisWorkbook.Sheets(SHEET_IRAISHO)
+    If Not wsReqEarly Is Nothing Then
+        Call RegisterSheetCellName(ThisWorkbook, wsReqEarly, "PDF_請求宛名", GetCellAddr("請求宛名"))
+        Call RegisterSheetCellName(ThisWorkbook, wsReqEarly, "PDF_工事名称", GetCellAddr("工事名称"))
+    End If
+    Err.Clear
+    On Error GoTo 0
+
     ' 提出要項・同封物はOptionButtonに変更済み（マスタ読み込み不要）
 
 FinalizeInit: ' 終了処理（ファイルを開いた場合）
